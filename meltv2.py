@@ -49,7 +49,7 @@ simulation.minimizeEnergy()
 simulation.context.setVelocitiesToTemperature(config['eq_temperature'])
 print('starting equilibration for',eq_steps,'steps')
 for i in range(0,eq_steps):
-    simulation.step(1)
+    integrator.step(1)
 
 with open(config['output_root']+'_eqed.pdb', 'w') as outfile:
     PDBFile.writeFile(simulation.topology, simulation.context.getState(getPositions=True).getPositions(), file=outfile, keepIds=True)
