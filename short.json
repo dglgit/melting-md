@@ -1,0 +1,14 @@
+{
+    "inpcrd":"3htb_jz4_complex.inpcrd",
+    "prmtop":"3htb_jz4_complex.prmtop",
+    "output_root":"outputs/3htb_short1",
+    "temperatures":[310,320],
+    "start":null,
+    "end":null,
+    "step":null,
+    "step_time_fs":2,
+    "eq_steps":1,
+    "eq_temperature":300,
+    "steps_per_temp":25000,
+    "dcd_interval":1000
+}
