@@ -6,6 +6,8 @@ import numpy as np
 import argparse
 import json
 import numpy as np
+import tqdm
+import gc
 #{'inpcrd': '', 'prmtop': '', 'output_root': 'out', 'temperatures': [], 'start': None, 'end': None, 'step': None, 'step_time_fs': 2, 'eq_steps': 100000, 'eq_temperature':300,'steps_per_temp': 10000,'dcd_interval':1000}
 
 if len(argv)<2:
@@ -33,9 +35,13 @@ print(f'running temperatures: {temps}')
 print(f'capturing dcd every {dcd_interval} steps, or {dcd_interval*step_size*1e-6}ns')
 inpcrd = AmberInpcrdFile(config['inpcrd'])
 prmtop = AmberPrmtopFile(config['prmtop'], periodicBoxVectors=inpcrd.boxVectors)
+#platform=openmm.Platform.getPlatformByName('OpenCL')
+#platform=openmm.Platform.getPlatformByName('CPU')
 method=PME if inpcrd.boxVectors is not None else NoCutoff
 system = prmtop.createSystem(implicitSolvent=OBC2,nonbondedMethod=method, constraints=HBonds, implicitSolventSaltConc=0.15*moles/liter)
 integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 1e-3*config['step_time_fs']*picoseconds)
+# DO NOT SET PLATFORM ON M2 MACBOOK
+# OPENCL IS SLOW AND SETTING AS CPU MAKES IT HANG
 simulation = Simulation(prmtop.topology, system, integrator)
 simulation.context.setPositions(inpcrd.positions)
 with open(config['output_root']+"_initial.pdb", 'w') as outfile:
@@ -48,21 +54,32 @@ simulation.minimizeEnergy()
 #        potentialEnergy=True, temperature=True))
 simulation.context.setVelocitiesToTemperature(config['eq_temperature'])
 print('starting equilibration for',eq_steps,'steps')
-for i in range(0,eq_steps):
-    integrator.step(1)
+null_out = open(os.devnull, 'w')
 
+# Set up StateDataReporter to write to /dev/null
+simulation.reporters.append(StateDataReporter(null_out, 10000, step=True, temperature=True))
+for i in tqdm.tqdm(range(0,eq_steps//1000)):
+    simulation.step(1000)
+    #gc.collect()
+    #if i%10000==0:
+    #    state=simulation.context.getState()
+    #    del state
+#simulation.reporters.pop()
 with open(config['output_root']+'_eqed.pdb', 'w') as outfile:
     PDBFile.writeFile(simulation.topology, simulation.context.getState(getPositions=True).getPositions(), file=outfile, keepIds=True)
 
 print('starting production run')
 dcdf=open(output_base+'_traj.dcd','wb')
 dcd=DCDFile(dcdf,simulation.topology,dcd_interval)
-for temp in temps:
-    print('setting temp at',temp)
-    integrator.setTemperature(temp*kelvin)
-    print(f"now at {temp}K")
-    for i in range(0,steps_per_temp//dcd_interval):
-        integrator.step(dcd_interval)
-        dcd.writeModel(simulation.context.getState(getPositions=True).getPositions())
-
-
+try:
+    for temp in temps:
+        print('setting temp at',temp)
+        integrator.setTemperature(temp*kelvin)
+        print(f"now at {temp}K")
+        for i in range(0,steps_per_temp//dcd_interval):
+            integrator.step(dcd_interval)
+            dcd.writeModel(simulation.context.getState(getPositions=True).getPositions())
+except Exception as e:
+    dcdf.close()
+    print('exception happened')
+    raise e

@@ -1,0 +1,14 @@
+{
+    "inpcrd":"3htb_jz4_complex.inpcrd",
+    "prmtop":"3htb_jz4_complex.prmtop",
+    "output_root":"outputs/melt1",
+    "temperatures":[320,330,340],
+    "start":null,
+    "end":null,
+    "step":null,
+    "step_time_fs":2,
+    "eq_steps":5000000,
+    "eq_temperature":300,
+    "steps_per_temp":2500000,
+    "dcd_interval":1000
+}
