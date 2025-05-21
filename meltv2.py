@@ -57,14 +57,17 @@ print('starting equilibration for',eq_steps,'steps')
 null_out = open(os.devnull, 'w')
 
 # Set up StateDataReporter to write to /dev/null
-simulation.reporters.append(StateDataReporter(null_out, 10000, step=True, temperature=True))
+simulation.reporters.append(StateDataReporter(null_out, 2500, step=True, temperature=True))
 for i in tqdm.tqdm(range(0,eq_steps//1000)):
     simulation.step(1000)
     #gc.collect()
-    #if i%10000==0:
-    #    state=simulation.context.getState()
+    #if ((i+1)*1000)%10000==0:
+    #    print("cleaning state")
+    #    state=simulation.context.getCheckpoint()
     #    del state
 #simulation.reporters.pop()
+null_out.close()
+print('writing to file')
 with open(config['output_root']+'_eqed.pdb', 'w') as outfile:
     PDBFile.writeFile(simulation.topology, simulation.context.getState(getPositions=True).getPositions(), file=outfile, keepIds=True)
 
@@ -76,7 +79,7 @@ try:
         print('setting temp at',temp)
         integrator.setTemperature(temp*kelvin)
         print(f"now at {temp}K")
-        for i in range(0,steps_per_temp//dcd_interval):
+        for i in tqdm.tqdm(range(0,steps_per_temp//dcd_interval)):
             integrator.step(dcd_interval)
             dcd.writeModel(simulation.context.getState(getPositions=True).getPositions())
 except Exception as e:

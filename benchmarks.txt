@@ -1,0 +1,8 @@
+state reporter per 10000
+2:55 
+getstate (get positions or get energy) per 10000
+02:55 also for both
+state reporter per 25000
+3:00
+state reporter per 2500
+03:05
